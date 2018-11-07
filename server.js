@@ -1,63 +1,61 @@
 const express = require('express');
+const proxy = require("http-proxy-middleware");
 const path = require('path');
+const compression = require("compression");
 const app = express();
-const fetch = require('node-fetch');
 const port = process.env.PORT || 3000;
+
+app.use(compression());
+
+app.get("/", function(req, res) {
+  res.redirect("/movies/1");
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/api/movies/:genre/relatedmovies', (req, res) => {
-  fetch(`http://localhost:3003/api/movies/${req.params.genre}/relatedmovies`)
-    .then(response => 
-      response.json().then(data => {
-        res.send(data);
-      }))
-    .catch(error => res.status(500).send(error.message)); 
-})
+app.get("/movies/:id", function(req, res) {
+  const reactPath = path.join(__dirname, "./public/index.html");
+  res.sendFile(reactPath);
+});
 
-app.get('/api/movies/:movieId/summary', (req, res) => {
-  fetch(`http://localhost:3007/api/movies/${req.params.movieId}/summary`)
-    .then(response => 
-      response.json().then(data => {
-        res.send(data);
-      }))
-    .catch(error => res.status(500).send(error.message)); 
-})
+// Related Movies
+app.use('/api/movies/:genre/relatedmovies', 
+  proxy({
+    target: 'http://localhost:3003',
+    changeOrigin: true
+  })
+);
 
-app.get('/api/movies/:movieid/rating', (req, res) => {
-  fetch(`http://localhost:3013/api/movies/${req.params.movieid}/rating`)
-    .then(response => 
-      response.json().then(data => {
-        res.send(data);
-      }))
-    .catch(error => res.status(500).send(error.message)); 
-})
+// Movie Summary
+app.use('/api/movies/:movieId/summary', 
+  proxy({
+    target: 'http://localhost:3007',
+    changeOrigin: true
+  })
+);
 
-app.get('/api/movies/:movieid/reviews', (req, res) => {
-  fetch(`http://localhost:3013/api/movies/${req.params.movieId}/reviews`)
-    .then(response => 
-      response.json().then(data => {
-        res.send(data);
-      }))
-    .catch(error => res.status(500).send(error.message)); 
-})
+// Reviews Module
+app.use('/api/movies/:movieid/rating', 
+  proxy({
+    target: 'http://localhost:3013',
+    changeOrigin: true
+  })
+);
 
-app.get('/api/movies/:movie/:date/:location', (req, res) => {
-  fetch(`http://localhost:3002/api/movies/${req.params.movie}/${req.params.date}/${req.params.location}`)
-    .then(response => 
-      response.json().then(data => {
-        res.send(data);
-      }))
-    .catch(error => res.status(500).send(error.message)); 
-})
+// Reviews Module
+app.use('/api/movies/:movieid/reviews', 
+  proxy({
+    target: 'http://localhost:3013',
+    changeOrigin: true
+  })
+);
 
-app.get('/api/moviesbyid/:movieid/:date/:location', (req, res) => {
-  fetch(`http://localhost:3002/api/moviesbyid/${req.params.movieid}/${req.params.date}/${req.params.location}`)
-    .then(response => 
-      response.json().then(data => {
-        res.send(data);
-      }))
-    .catch(error => res.status(500).send(error.message)); 
-})
+// Movie Times Module
+app.use('/api/moviesbyid/:movieid/:date/:location', 
+  proxy({
+    target: 'http://localhost:3002',
+    changeOrigin: true
+  })
+)
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
